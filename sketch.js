@@ -1,4 +1,4 @@
-// AI Classifier
+// AI Classifier - v1.0.4 (YouTube Button Debug)
 let classifier;
 const modelURL = './my_model/';
 
@@ -164,9 +164,16 @@ function gotResult(error, results) {
 }
 
 function updateRecipeUI(label) {
+  console.log('Updating Recipe UI for label:', label);
   const container = document.getElementById('recipe-content-area');
   const data = recipeData[label];
-  if (!data) return;
+  
+  if (!data) {
+    console.warn('No recipe data found for label:', label);
+    return;
+  }
+  
+  console.log('Found recipe data, rendering YouTube button...');
   
   let html = `<div class="recipe-card" style="display: block;">`;
   data.tags.forEach(t => html += `<span class="recipe-tag">${t}</span>`);
