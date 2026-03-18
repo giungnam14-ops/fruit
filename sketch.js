@@ -41,17 +41,20 @@ const recipeData = {
   "생과용(색 선명 표면 깨끗  형태 균일)": {
     tags: ["상태: 최상", "비타민 가득"],
     title: "신선한 과일 그대로 섭취",
-    recipes: ["🍏 생과일 슬라이스", "🥗 과일 요거트 샐러드", "🥛 건강 주스"]
+    recipes: ["🍏 생과일 슬라이스", "🥗 과일 요거트 샐러드", "🥛 건강 주스"],
+    youtubeQuery: "생과일 맛있게 먹는 법 레시피"
   },
   "주스용(색이 약간 흐림 / 얼룩 있음  약간 무른 느낌  크기 작거나 형태 불균형)": {
     tags: ["상태: 양호", "가공 권장"],
     title: "달콤한 디저트 및 주스 활용",
-    recipes: ["🥤 고당도 착즙 주스", "🍯 수제 과일 잼", " Pie 홈베이킹 토핑"]
+    recipes: ["🥤 고당도 착즙 주스", "🍯 수제 과일 잼", "🍎 홈베이킹 토닝"],
+    youtubeQuery: "주스용 과일 활용 레시피 주스 잼 만들기"
   },
   "폐기용": {
     tags: ["상태: 불량", "섭취 주의"],
     title: "친환경 배출 및 분리수거",
-    recipes: ["⚠️ 곰팡이 주의", "♻️ 음식물 쓰레기 배출", "🌱 식물 비료 활용 가능"]
+    recipes: ["⚠️ 곰팡이 주의", "♻️ 음식물 쓰레기 배출", "🌱 식물 비료 활용 가능"],
+    youtubeQuery: "상한 과일 처리 방법 음식물 쓰레기 줄이기"
   }
 };
 
@@ -170,7 +173,17 @@ function updateRecipeUI(label) {
   html += `<div class="recipe-title" style="margin-top:10px; font-size:1.1rem;">${data.title}</div>`;
   html += `<div class="recipe-content"><ul>`;
   data.recipes.forEach(r => html += `<li style="margin-bottom:8px;">${r}</li>`);
-  html += `</ul></div></div>`;
+  html += `</ul></div>`;
+  
+  // Add YouTube Link
+  const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(data.youtubeQuery)}`;
+  html += `
+    <a href="${ytUrl}" target="_blank" class="btn-youtube">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      YouTube 레시피 보기
+    </a>
+  </div>`;
+  
   container.innerHTML = html;
 }
 
