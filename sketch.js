@@ -34,17 +34,36 @@ function modelLoaded() {
 }
 
 function setup() {
+  // Use a fixed size canvas
   const canvas = createCanvas(640, 480);
   canvas.parent('canvas-container');
   
   updateStatus("모델 및 라이브러리 초기화 중...");
   
-  // Initialize classifier in setup instead of preload
+  // Initialize classifier
   classifier = ml5.imageClassifier(imageModelURL + 'model.json', modelLoaded);
   
-  // Create the video
+  // Define constraints for better compatibility
+  const constraints = {
+    video: {
+      mandatory: {
+        minWidth: 640,
+        minHeight: 480
+      },
+      optional: [{ maxFrameRate: 30 }]
+    },
+    audio: false
+  };
+
+  // Create the video with constraints
   video = createCapture(VIDEO, function(stream) {
     console.log('Video stream started');
+    // Important for iOS/Safari support
+    video.elt.setAttribute('playsinline', '');
+    video.elt.setAttribute('muted', '');
+    // Ensure the video is actually playing
+    video.elt.play().catch(e => console.error("Video play failed:", e));
+    
     if (isModelLoaded) {
       updateStatus("카메라 연결 성공! '실시간 분석 시작' 버튼을 눌러주세요.");
       document.getElementById('start-btn').disabled = false;
