@@ -15,35 +15,102 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4ecca3;
+            --secondary: #3498db;
+            --danger: #ff4757;
+            --bg-dark: #0f172a;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+        }
         body {
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
             color: white;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background */
+        .bg-fruits {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .bg-fruit {
+            position: absolute;
+            font-size: 2rem;
+            filter: blur(2px);
+            opacity: 0.2;
+            animation: float 20s linear infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(110vh) rotate(0deg); }
+            100% { transform: translateY(-10vh) rotate(360deg); }
+        }
+
+        header {
+            margin: 40px 0 20px;
+            text-align: center;
         }
         h1 {
-            margin-bottom: 20px;
-            font-weight: 300;
-            letter-spacing: 2px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(to right, #4ecca3, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             text-transform: uppercase;
+            letter-spacing: 4px;
         }
+        .subtitle {
+            font-weight: 300;
+            opacity: 0.7;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        main {
+            width: 100%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            padding: 20px;
+        }
+        @media (min-width: 900px) {
+            main { grid-template-columns: 1.5fr 1fr; }
+        }
+
+        .prediction-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
         #canvas-container {
-            border-radius: 20px;
+            width: 100%;
+            aspect-ratio: 4/3;
+            max-width: 640px;
+            border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            border: 1px solid var(--glass-border);
             position: relative;
             background: #000;
-            width: 640px;
-            height: 480px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -63,33 +130,78 @@
             100% { transform: rotate(360deg); }
         }
 
+        .recipe-section {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: fit-content;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .recipe-card {
+            display: none;
+            animation: fadeIn 0.8s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .recipe-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .recipe-content {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        .recipe-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(78, 204, 163, 0.1);
+            color: var(--primary);
+            font-size: 0.8rem;
+            margin-right: 8px;
+            margin-bottom: 10px;
+        }
+
         .controls {
-            margin-top: 20px;
+            margin-top: 25px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
         }
         button, .file-label {
-            padding: 12px 25px;
+            padding: 14px 28px;
             font-size: 0.9rem;
             border: none;
-            border-radius: 50px;
-            background: #4ecca3;
-            color: #1a1a2e;
+            border-radius: 16px;
+            background: var(--primary);
+            color: #0f172a;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
             transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(78, 204, 163, 0.3);
             display: flex;
             align-items: center;
-            justify-content: center;
-            text-decoration: none;
+            gap: 8px;
         }
         button:hover, .file-label:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(78, 204, 163, 0.4);
-            background: #45b792;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(78, 204, 163, 0.2);
+            filter: brightness(1.1);
         }
         button:disabled {
             background: #555;
@@ -97,20 +209,12 @@
             box-shadow: none;
             color: #aaa;
         }
-        .btn-secondary {
-            background: #3498db;
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-            color: white;
-        }
+        .btn-secondary { background: var(--secondary); color: white; }
         .btn-secondary:hover {
             background: #2980b9;
             box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
         }
-        .btn-danger {
-            background: #e74c3c;
-            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
-            color: white;
-        }
+        .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover {
             background: #c0392b;
             box-shadow: 0 8px 20px rgba(231, 76, 60, 0.4);
@@ -118,61 +222,100 @@
         input[type="file"] {
             display: none;
         }
-        .info {
+        .status-box {
             margin-top: 20px;
-            font-size: 1.1rem;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 25px;
-            border-radius: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 20px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            text-align: center;
+            font-weight: 500;
         }
+
         #results-container {
             margin-top: 20px;
             width: 100%;
-            max-width: 400px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: none;
+            display: grid;
+            gap: 10px;
         }
         .result-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 8px 15px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            transition: background 0.3s ease;
+            align-items: center;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        .result-item:first-child {
+        .result-item.top {
             background: rgba(78, 204, 163, 0.1);
             border: 1px solid rgba(78, 204, 163, 0.2);
         }
-        .result-name { font-weight: bold; }
-        .result-prob { color: #4ecca3; font-family: monospace; }
+        .result-name { font-weight: 600; color: #f8fafc; }
+        .result-prob { font-family: 'Orbitron', monospace; color: var(--primary); }
     </style>
 </head>
 <body>
-    <h1>Fruit Classifier</h1>
-    <div id="canvas-container">
-        <div id="loader"></div>
-    </div>
-    
-    <div class="controls">
-        <button id="start-btn" onclick="startAnalysis()" disabled>실시간 분석 시작</button>
-        <label for="image-input" class="file-label btn-secondary">사진 올리기</label>
-        <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
-        <button onclick="resetAll()" class="btn-danger">초기화</button>
-    </div>
+    <div class="bg-fruits" id="bg-animation"></div>
 
-    <div class="info" id="label-text">모델을 불러오는 중...</div>
+    <header>
+        <h1>Apple Classifier</h1>
+        <p class="subtitle">AI 사과 품질 분류기 및 스마트 레시피 추천</p>
+    </header>
 
-    <div id="results-container">
-        <!-- Results will be injected here -->
-    </div>
+    <main>
+        <section class="prediction-section">
+            <div id="canvas-container">
+                <div id="loader"></div>
+            </div>
+            <div class="controls">
+                <button id="start-btn" onclick="startAnalysis()" disabled>
+                    <span>📷</span> 실시간 분석 시작
+                </button>
+                <label for="image-input" class="file-label btn-secondary">
+                    <span>📁</span> 사진 올리기
+                </label>
+                <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
+                <button onclick="resetAll()" class="btn-danger">
+                    <span>🔄</span> 초기화
+                </button>
+            </div>
+            <div class="status-box" id="label-text">모델을 불러오는 중...</div>
+            <div id="results-container"></div>
+        </section>
 
+        <aside class="recipe-section" id="recipe-container">
+            <div class="recipe-title">
+                <span>🍎</span> 스마트 레시피 추천
+            </div>
+            <p id="recipe-intro">사과를 분석하면 품질에 맞는 최적의 활용법을 추천해 드립니다.</p>
+            
+            <!-- Default placeholder content -->
+            <div id="recipe-content-area">
+                <div class="recipe-card" style="display: block; opacity: 0.5;">
+                    <span class="recipe-tag">분석 준비</span>
+                    <div class="recipe-content">
+                        카메라를 켜거나 사진을 업로드하여 분석을 시작해 주세요.
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // Create floating background fruits
+        const fruits = ['🍎', '🍎', '🍏', '🍏', '🍎', '✨', '🍃'];
+        const bg = document.getElementById('bg-animation');
+        for (let i = 0; i < 15; i++) {
+            const fruit = document.createElement('div');
+            fruit.className = 'bg-fruit';
+            fruit.innerText = fruits[Math.floor(Math.random() * fruits.length)];
+            fruit.style.left = Math.random() * 100 + 'vw';
+            fruit.style.animationDelay = Math.random() * 20 + 's';
+            fruit.style.fontSize = (Math.random() * 1.5 + 1) + 'rem';
+            bg.appendChild(fruit);
+        }
+    </script>
     <script src="sketch.js"></script>
 </body>
 </html>

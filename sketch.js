@@ -176,6 +176,57 @@ function classifyVideo() {
   }
 }
 
+// Recipe Data
+const recipeData = {
+  "생과용(색 선명 표면 깨끗  형태 균일)": {
+    tags: ["신선도 최상", "선물용", "샐러드용"],
+    title: "신선한 사과 그대로 즐기기",
+    recipes: [
+      "🥗 <b>애플 월도프 샐러드</b>: 아삭한 사과와 호두, 마요네즈 드레싱의 완벽한 조화",
+      "🍎 <b>허니 애플 카나페</b>: 크래커 위에 슬라이스 사과와 치즈, 꿀을 얹어 우아한 간식 완성",
+      "😋 <b>생과일 슬라이스</b>: 껍질째 얇게 썰어 본연의 단맛과 비타민을 즐기세요"
+    ]
+  },
+  "주스용(색이 약간 흐림 / 얼룩 있음  약간 무른 느낌  크기 작거나 형태 불균형)": {
+    tags: ["가공용", "홈베이킹", "고당도"],
+    title: "달콤한 홈메이드 디저트 & 주스",
+    recipes: [
+      "🥤 <b>착즙 사과 주스</b>: 믹서기에 물 없이 갈아 부드러운 순수 사과즙을 만드세요",
+      "🍯 <b>시나몬 사과잼</b>: 무른 부분을 제거하고 다져서 시나몬과 함께 졸이면 향긋한 잼 완성",
+      "🥧 <b>홈메이드 애플파이</b>: 버터에 볶은 사과를 토핑으로 얹어 오븐에 구워보세요"
+    ]
+  },
+  "폐기용": {
+    tags: ["섭취 주의", "재활용", "퇴비"],
+    title: "친환경 배출 및 재활용 안내",
+    recipes: [
+      "⚠️ <b>주의</b>: 곰팡이가 있거나 변질된 사과는 식중독 위험이 있어 섭취하지 않는 것이 좋습니다.",
+      "♻️ <b>음식물 쓰레기 배출</b>: 수분을 최대한 제거한 뒤 전용 수거함에 배출해 주세요.",
+      "🌱 <b>유기질 비료</b>: 상태가 아주 심하지 않다면 흙과 섞어 화분 비료로 활용할 수 있습니다."
+    ]
+  }
+};
+
+function updateRecipeUI(label) {
+  const container = document.getElementById('recipe-content-area');
+  const data = recipeData[label];
+  
+  if (!data) return;
+  
+  let html = `<div class="recipe-card" style="display: block;">`;
+  data.tags.forEach(tag => {
+    html += `<span class="recipe-tag">${tag}</span>`;
+  });
+  html += `<div class="recipe-title" style="margin-top:10px; font-size:1.1rem;">${data.title}</div>`;
+  html += `<div class="recipe-content"><ul>`;
+  data.recipes.forEach(r => {
+    html += `<li style="margin-bottom:8px;">${r}</li>`;
+  });
+  html += `</ul></div></div>`;
+  
+  container.innerHTML = html;
+}
+
 function gotResult(error, results) {
   if (error) {
     console.error(error);
@@ -190,11 +241,16 @@ function gotResult(error, results) {
     let confidence = (results[0].confidence * 100).toFixed(2);
     
     // Update the main status label with the TOP result
-    updateStatus(`결과: ${label} (${confidence}%)`);
+    updateStatus(`분석 결과: ${label} (${confidence}%)`);
     
-    results.forEach(res => {
+    // Update Recipe UI if confidence is high (> 60%)
+    if (results[0].confidence > 0.6) {
+      updateRecipeUI(label);
+    }
+    
+    results.forEach((res, index) => {
       const item = document.createElement('div');
-      item.className = 'result-item';
+      item.className = index === 0 ? 'result-item top' : 'result-item';
       
       const name = document.createElement('span');
       name.className = 'result-name';
