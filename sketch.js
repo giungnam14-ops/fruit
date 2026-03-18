@@ -34,7 +34,6 @@ function modelLoaded() {
 }
 
 function setup() {
-  // Use a fixed size canvas
   const canvas = createCanvas(640, 480);
   canvas.parent('canvas-container');
   
@@ -43,26 +42,32 @@ function setup() {
   // Initialize classifier
   classifier = ml5.imageClassifier(imageModelURL + 'model.json', modelLoaded);
   
-  // Define constraints for better compatibility
+  // Using more flexible constraints
   const constraints = {
     video: {
-      mandatory: {
-        minWidth: 640,
-        minHeight: 480
-      },
-      optional: [{ maxFrameRate: 30 }]
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      facingMode: "user"
     },
     audio: false
   };
 
-  // Create the video with constraints
-  video = createCapture(VIDEO, function(stream) {
+  // Create the video
+  video = createCapture(constraints, function(stream) {
     console.log('Video stream started');
-    // Important for iOS/Safari support
-    video.elt.setAttribute('playsinline', '');
-    video.elt.setAttribute('muted', '');
-    // Ensure the video is actually playing
-    video.elt.play().catch(e => console.error("Video play failed:", e));
+    
+    // Compatibility fixes
+    const videoElt = video.elt;
+    videoElt.setAttribute('playsinline', '');
+    videoElt.setAttribute('muted', '');
+    videoElt.muted = true; // Ensure it's muted
+    
+    // Explicitly call play
+    videoElt.play().then(() => {
+      console.log("Video playing successfully");
+    }).catch(e => {
+      console.warn("Video play error (possibly awaiting user interaction):", e);
+    });
     
     if (isModelLoaded) {
       updateStatus("카메라 연결 성공! '실시간 분석 시작' 버튼을 눌러주세요.");
@@ -71,6 +76,7 @@ function setup() {
       updateStatus("카메라 연결 성공! 모델이 로드될 때까지 기다려주세요...");
     }
   });
+  
   video.size(640, 480);
   video.hide();
 }
