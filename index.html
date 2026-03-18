@@ -145,6 +145,12 @@
             border: 1px solid var(--glass-border);
             padding: 25px;
             margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 768px) {
+            .chart-section { grid-template-columns: 1fr 1fr; }
         }
         .chart-container {
             height: 250px;
@@ -349,11 +355,21 @@
             </section>
 
             <section class="chart-section" id="price-section">
-                <div class="recipe-title">
-                    <span>📊</span> 주간 가격 동향 (단위: 원)
+                <div class="chart-block">
+                    <div class="recipe-title">
+                        <span>📊</span> 지난 7일 기록 (단위: 원)
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="priceChart"></canvas>
+                <div class="chart-block">
+                    <div class="recipe-title">
+                        <span>🚀</span> 다음 1주 예측 (단위: 원)
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
                 </div>
             </section>
         </div>
