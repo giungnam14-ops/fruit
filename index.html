@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 과일 분류기 | 실시간 및 사진 분석 서비스</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="AI 기술을 활용한 실시간 과일 분류 서비스입니다. 웹캠이나 사진 업로드를 통해 과일의 종류를 즉시 판별하세요.">
+    <meta name="keywords" content="과일 분류, AI, 머신러닝, Teachable Machine, 과일 판별, 실시간 분석">
+    
+    <!-- Open Graph for Social Media -->
+    <meta property="og:title" content="AI 과일 분류기">
+    <meta property="og:description" content="웹캠과 사진으로 과일을 스마트하게 분류해보세요!">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        #canvas-container {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            background: #000;
+            width: 640px;
+            height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Loading Spinner */
+        #loader {
+            position: absolute;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #4ecca3;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+        button, .file-label {
+            padding: 12px 25px;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 50px;
+            background: #4ecca3;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(78, 204, 163, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        button:hover, .file-label:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(78, 204, 163, 0.4);
+            background: #45b792;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+            color: #aaa;
+        }
+        .btn-secondary {
+            background: #3498db;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #2980b9;
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+        }
+        .btn-danger {
+            background: #e74c3c;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+            box-shadow: 0 8px 20px rgba(231, 76, 60, 0.4);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .info {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 25px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #results-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 8px 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            transition: background 0.3s ease;
+        }
+        .result-item:first-child {
+            background: rgba(78, 204, 163, 0.1);
+            border: 1px solid rgba(78, 204, 163, 0.2);
+        }
+        .result-name { font-weight: bold; }
+        .result-prob { color: #4ecca3; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Fruit Classifier</h1>
+    <div id="canvas-container">
+        <div id="loader"></div>
+    </div>
+    
+    <div class="controls">
+        <button id="start-btn" onclick="startAnalysis()" disabled>실시간 분석 시작</button>
+        <label for="image-input" class="file-label btn-secondary">사진 올리기</label>
+        <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
+        <button onclick="resetAll()" class="btn-danger">초기화</button>
+    </div>
+
+    <div class="info" id="label-text">모델을 불러오는 중...</div>
+
+    <div id="results-container">
+        <!-- Results will be injected here -->
+    </div>
+
+    <script src="sketch.js"></script>
+</body>
+</html>

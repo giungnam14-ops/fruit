@@ -1,0 +1,1 @@
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.12","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-03-18T01:33:00.745Z","userMetadata":{},"modelName":"사과 분류","labels":["생과용(색 선명 표면 깨끗  형태 균일)","주스용(색이 약간 흐림 / 얼룩 있음  약간 무른 느낌  크기 작거나 형태 불균형)","폐기용"],"imageSize":224}
