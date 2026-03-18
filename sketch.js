@@ -1,16 +1,19 @@
-// Classifier Variable
-let classifier;
-// Model URL
-let imageModelURL = './my_model/';
+// Classifiers
+let appleClassifier;
+let generalClassifier;
+const appleModelURL = './my_model/';
 
-// Video
+// Video & State
 let video;
 let uploadedImg;
-// To store the classification
-let label = "";
 let isAnalyzing = false;
-let isModelLoaded = false;
-let mode = 'video'; // 'video' or 'image'
+let isAppleModelLoaded = false;
+let isGeneralModelLoaded = false;
+let mode = 'video';
+let currentFruit = "";
+
+// Chart.js Instance
+let priceChart;
 
 function updateStatus(msg) {
   const el = document.getElementById('label-text');
@@ -18,18 +21,16 @@ function updateStatus(msg) {
 }
 
 function modelLoaded() {
-  console.log('Model Loaded!');
-  isModelLoaded = true;
+  if (this === appleClassifier) isAppleModelLoaded = true;
+  if (this === generalClassifier) isGeneralModelLoaded = true;
   
-  // Hide the loader
-  const loader = document.getElementById('loader');
-  if (loader) loader.style.display = 'none';
-
-  if (video) {
-    updateStatus("모델 로드 완료! '실시간 분석 시작' 버튼을 눌러주세요.");
+  if (isAppleModelLoaded && isGeneralModelLoaded) {
+    console.log('All Models Loaded!');
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
+    updateStatus("준비 완료! 분석 시작 버튼을 눌러주세요.");
     document.getElementById('start-btn').disabled = false;
-  } else {
-    updateStatus("모델 로드 완료! 카메라를 준비 중입니다...");
+    initChart();
   }
 }
 
@@ -37,236 +38,216 @@ function setup() {
   const canvas = createCanvas(640, 480);
   canvas.parent('canvas-container');
   
-  updateStatus("모델 및 라이브러리 초기화 중...");
+  updateStatus("AI 엔진 초기화 중...");
   
-  // Initialize classifier
-  classifier = ml5.imageClassifier(imageModelURL + 'model.json', modelLoaded);
+  // Load Models
+  appleClassifier = ml5.imageClassifier(appleModelURL + 'model.json', modelLoaded);
+  generalClassifier = ml5.imageClassifier('MobileNet', modelLoaded);
   
-  // Using more flexible constraints
   const constraints = {
-    video: {
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-      facingMode: "user"
-    },
+    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
     audio: false
   };
 
-  // Create the video
   video = createCapture(constraints, function(stream) {
-    console.log('Video stream started');
-    
-    // Compatibility fixes
     const videoElt = video.elt;
     videoElt.setAttribute('playsinline', '');
     videoElt.setAttribute('muted', '');
-    videoElt.muted = true; // Ensure it's muted
-    
-    // Explicitly call play
-    videoElt.play().then(() => {
-      console.log("Video playing successfully");
-    }).catch(e => {
-      console.warn("Video play error (possibly awaiting user interaction):", e);
-    });
-    
-    if (isModelLoaded) {
-      updateStatus("카메라 연결 성공! '실시간 분석 시작' 버튼을 눌러주세요.");
-      document.getElementById('start-btn').disabled = false;
-    } else {
-      updateStatus("카메라 연결 성공! 모델이 로드될 때까지 기다려주세요...");
-    }
+    videoElt.muted = true;
+    videoElt.play().catch(e => console.warn("Video auto-play blocked:", e));
   });
-  
   video.size(640, 480);
   video.hide();
 }
 
 function startAnalysis() {
-  if (isModelLoaded) {
-    if (!isAnalyzing) {
-      // Start
-      mode = 'video';
-      isAnalyzing = true;
-      document.getElementById('start-btn').innerText = "분석 중지";
-      document.getElementById('start-btn').className = "btn-danger"; // Change color to red
-      document.getElementById('results-container').style.display = 'block';
-      updateStatus("실시간 영상 분석을 시작합니다...");
-      classifyVideo();
-    } else {
-      // Stop
-      isAnalyzing = false;
-      document.getElementById('start-btn').innerText = "실시간 분석 시작";
-      document.getElementById('start-btn').className = ""; // Back to default (green)
-      updateStatus("분석 중지됨. '실시간 분석 시작' 버튼을 눌러주세요.");
-    }
+  if (!isAnalyzing) {
+    mode = 'video';
+    isAnalyzing = true;
+    document.getElementById('start-btn').innerText = "분석 중지";
+    document.getElementById('start-btn').className = "btn-danger";
+    classifyVideo();
+  } else {
+    isAnalyzing = false;
+    document.getElementById('start-btn').innerText = "분석 시작";
+    document.getElementById('start-btn').className = "";
   }
 }
 
 function handleImageUpload(event) {
   const file = event.target.files[0];
-  if (file && isModelLoaded) {
+  if (file) {
     const reader = new FileReader();
     reader.onload = function(e) {
-      uploadedImg = createImg(e.target.result, 'Uploaded fruit', '', function() {
+      uploadedImg = createImg(e.target.result, 'Analysis target', '', function() {
         mode = 'image';
         isAnalyzing = false;
-        document.getElementById('start-btn').innerText = "실시간 분석 시작";
-        document.getElementById('start-btn').disabled = false;
-        document.getElementById('results-container').style.display = 'block';
         updateStatus("사진 분석 중...");
-        
-        // ML5 classification
-        classifier.classify(uploadedImg, function(err, results) {
-          gotResult(err, results);
-          updateStatus("사진 분석 완료!");
+        generalClassifier.classify(uploadedImg, (err, results) => {
+          handleGeneralResult(err, results, () => {
+            uploadedImg.hide();
+          });
         });
-        
-        uploadedImg.hide();
       });
     };
     reader.readAsDataURL(file);
-  } else if (!isModelLoaded) {
-    alert("모델이 아직 로드되지 않았습니다. 잠시만 기다려주세요.");
   }
+}
+
+function classifyVideo() {
+  if (isAnalyzing && video && mode === 'video') {
+    generalClassifier.classify(video, handleGeneralResult);
+  }
+}
+
+function handleGeneralResult(err, results, callback) {
+  if (err) { console.error(err); return; }
+  
+  if (results && results.length > 0) {
+    const topResult = results[0].label.toLowerCase();
+    
+    // Check if it's apple-related
+    if (topResult.includes('apple') || topResult.includes('granny smith')) {
+      currentFruit = "apple";
+      const target = mode === 'video' ? video : uploadedImg;
+      appleClassifier.classify(target, (err, appleResults) => {
+        displayResults(appleResults, "Apple Quality");
+        updateDynamicContent("Apple");
+      });
+    } else {
+      // General fruit
+      currentFruit = results[0].label.split(',')[0];
+      displayResults(results, "General Fruit");
+      updateDynamicContent(currentFruit);
+    }
+  }
+  
+  if (callback) callback();
+  if (isAnalyzing && mode === 'video') setTimeout(classifyVideo, 500);
+}
+
+function displayResults(results, type) {
+  const container = document.getElementById('results-container');
+  container.innerHTML = '';
+  
+  results.slice(0, 3).forEach((res, i) => {
+    const div = document.createElement('div');
+    div.className = i === 0 ? 'result-item top' : 'result-item';
+    div.innerHTML = `<span class="result-name">${res.label}</span><span class="result-prob">${(res.confidence * 100).toFixed(1)}%</span>`;
+    container.appendChild(div);
+  });
+  
+  const topLabel = results[0].label;
+  updateStatus(`[${type}] 분석 결과: ${topLabel}`);
+}
+
+// Recipes & Market Data
+const fruitData = {
+  "apple": {
+    recipes: ["🍏 애플 타르트", "🥗 사과 견과류 샐러드", "🥤 상큼 사과 주스"],
+    prices: [1500, 1600, 1550, 1400, 1800, 2100, 2200],
+    tags: ["식전 추천", "변비 예방"]
+  },
+  "banana": {
+    recipes: ["🍌 달콤 바나나 브레드", "🥤 바나나 케일 스무디", "🥞 팬케이크 토핑"],
+    prices: [800, 850, 900, 820, 750, 700, 650],
+    tags: ["에너지 보충", "운동 전후"]
+  },
+  "orange": {
+    recipes: ["🍊 신선한 착즙 오렌지 주스", "🍰 오렌지 파운드 케이크", "🥗 오렌지 드레싱 샐러드"],
+    prices: [1200, 1300, 1250, 1400, 1350, 1500, 1600],
+    tags: ["비타민 C 충전", "피로 회복"]
+  },
+  "strawberry": {
+    recipes: ["🍓 딸기 생크림 케이크", "🍦 딸기 요거트 파르페", "🍹 수제 딸기 청"],
+    prices: [4500, 4200, 4800, 5000, 5200, 4900, 4700],
+    tags: ["봄 제철", "디저트 최강"]
+  },
+  "default": {
+    recipes: ["🥣 과일 모듬 요거트", "🍧 과일 화채", "🧃 건강 과일 스무디"],
+    prices: [1000, 1100, 1050, 1200, 1150, 1250, 1300],
+    tags: ["범용 활용", "수분 보충"]
+  }
+};
+
+function updateDynamicContent(fruitName) {
+  const key = fruitName.toLowerCase().includes('apple') ? 'apple' : 
+              fruitName.toLowerCase().includes('banana') ? 'banana' :
+              fruitName.toLowerCase().includes('orange') ? 'orange' :
+              fruitName.toLowerCase().includes('strawberry') ? 'strawberry' : 'default';
+              
+  const data = fruitData[key];
+  
+  // Update Recipes
+  const recipeArea = document.getElementById('recipe-content-area');
+  let html = `<div class="recipe-card" style="display: block;">`;
+  data.tags.forEach(t => html += `<span class="recipe-tag">${t}</span>`);
+  html += `<div class="recipe-title" style="margin-top:10px; font-size:1.1rem;">${fruitName} 추천 활용법</div>`;
+  html += `<div class="recipe-content"><ul>`;
+  data.recipes.forEach(r => html += `<li style="margin-bottom:8px;">${r}</li>`);
+  html += `</ul></div></div>`;
+  recipeArea.innerHTML = html;
+  
+  // Update Chart
+  updateChart(fruitName, data.prices);
+}
+
+function initChart() {
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['6일전', '5일전', '4일전', '3일전', '2일전', '작일', '오늘'],
+      datasets: [{
+        label: '시장 평균가',
+        data: fruitData.default.prices,
+        borderColor: '#4ecca3',
+        backgroundColor: 'rgba(78, 204, 163, 0.2)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#4ecca3',
+        pointRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#cbd5e1' } },
+        x: { grid: { display: false }, ticks: { color: '#cbd5e1' } }
+      }
+    }
+  });
+}
+
+function updateChart(name, prices) {
+  if (!priceChart) return;
+  priceChart.data.datasets[0].data = prices;
+  priceChart.data.datasets[0].label = `${name} 가격 동향`;
+  priceChart.update();
 }
 
 function resetAll() {
   isAnalyzing = false;
   mode = 'video';
   uploadedImg = null;
-  label = "";
-  document.getElementById('start-btn').innerText = "실시간 분석 시작";
-  document.getElementById('start-btn').disabled = !isModelLoaded;
-  document.getElementById('results-container').style.display = 'none';
+  document.getElementById('start-btn').innerText = "분석 시작";
+  document.getElementById('results-container').innerHTML = '';
   document.getElementById('image-input').value = "";
-  updateStatus("카메라 연결 성공! '실시간 분석 시작' 버튼을 눌러주세요.");
+  updateStatus("준비 완료! 분석 시작 버튼을 눌러주세요.");
 }
 
 function draw() {
   background(0);
-  
   if (mode === 'video' && video) {
-    // Draw the video mirrored
-    push();
-    translate(width, 0);
-    scale(-1, 1);
-    image(video, 0, 0);
-    pop();
+    push(); translate(width, 0); scale(-1, 1); image(video, 0, 0); pop();
   } else if (mode === 'image' && uploadedImg) {
-    // Draw the static image centered and scaled
-    push();
     let imgRatio = uploadedImg.width / uploadedImg.height;
     let canvasRatio = width / height;
-    let w, h;
-    if (imgRatio > canvasRatio) {
-      w = width;
-      h = width / imgRatio;
-    } else {
-      h = height;
-      w = height * imgRatio;
-    }
+    let w = imgRatio > canvasRatio ? width : height * imgRatio;
+    let h = imgRatio > canvasRatio ? width / imgRatio : height;
     image(uploadedImg, (width - w) / 2, (height - h) / 2, w, h);
-    pop();
-  }
-}
-
-function classifyVideo() {
-  if (isAnalyzing && isModelLoaded && video && mode === 'video') {
-    classifier.classify(video, gotResult);
-  }
-}
-
-// Recipe Data
-const recipeData = {
-  "생과용(색 선명 표면 깨끗  형태 균일)": {
-    tags: ["신선도 최상", "선물용", "샐러드용"],
-    title: "신선한 사과 그대로 즐기기",
-    recipes: [
-      "🥗 <b>애플 월도프 샐러드</b>: 아삭한 사과와 호두, 마요네즈 드레싱의 완벽한 조화",
-      "🍎 <b>허니 애플 카나페</b>: 크래커 위에 슬라이스 사과와 치즈, 꿀을 얹어 우아한 간식 완성",
-      "😋 <b>생과일 슬라이스</b>: 껍질째 얇게 썰어 본연의 단맛과 비타민을 즐기세요"
-    ]
-  },
-  "주스용(색이 약간 흐림 / 얼룩 있음  약간 무른 느낌  크기 작거나 형태 불균형)": {
-    tags: ["가공용", "홈베이킹", "고당도"],
-    title: "달콤한 홈메이드 디저트 & 주스",
-    recipes: [
-      "🥤 <b>착즙 사과 주스</b>: 믹서기에 물 없이 갈아 부드러운 순수 사과즙을 만드세요",
-      "🍯 <b>시나몬 사과잼</b>: 무른 부분을 제거하고 다져서 시나몬과 함께 졸이면 향긋한 잼 완성",
-      "🥧 <b>홈메이드 애플파이</b>: 버터에 볶은 사과를 토핑으로 얹어 오븐에 구워보세요"
-    ]
-  },
-  "폐기용": {
-    tags: ["섭취 주의", "재활용", "퇴비"],
-    title: "친환경 배출 및 재활용 안내",
-    recipes: [
-      "⚠️ <b>주의</b>: 곰팡이가 있거나 변질된 사과는 식중독 위험이 있어 섭취하지 않는 것이 좋습니다.",
-      "♻️ <b>음식물 쓰레기 배출</b>: 수분을 최대한 제거한 뒤 전용 수거함에 배출해 주세요.",
-      "🌱 <b>유기질 비료</b>: 상태가 아주 심하지 않다면 흙과 섞어 화분 비료로 활용할 수 있습니다."
-    ]
-  }
-};
-
-function updateRecipeUI(label) {
-  const container = document.getElementById('recipe-content-area');
-  const data = recipeData[label];
-  
-  if (!data) return;
-  
-  let html = `<div class="recipe-card" style="display: block;">`;
-  data.tags.forEach(tag => {
-    html += `<span class="recipe-tag">${tag}</span>`;
-  });
-  html += `<div class="recipe-title" style="margin-top:10px; font-size:1.1rem;">${data.title}</div>`;
-  html += `<div class="recipe-content"><ul>`;
-  data.recipes.forEach(r => {
-    html += `<li style="margin-bottom:8px;">${r}</li>`;
-  });
-  html += `</ul></div></div>`;
-  
-  container.innerHTML = html;
-}
-
-function gotResult(error, results) {
-  if (error) {
-    console.error(error);
-    return;
-  }
-  
-  const resultsContainer = document.getElementById('results-container');
-  resultsContainer.innerHTML = ''; 
-  
-  if (results && results.length > 0) {
-    label = results[0].label;
-    let confidence = (results[0].confidence * 100).toFixed(2);
-    
-    // Update the main status label with the TOP result
-    updateStatus(`분석 결과: ${label} (${confidence}%)`);
-    
-    // Update Recipe UI if confidence is high (> 60%)
-    if (results[0].confidence > 0.6) {
-      updateRecipeUI(label);
-    }
-    
-    results.forEach((res, index) => {
-      const item = document.createElement('div');
-      item.className = index === 0 ? 'result-item top' : 'result-item';
-      
-      const name = document.createElement('span');
-      name.className = 'result-name';
-      name.innerText = res.label;
-      
-      const prob = document.createElement('span');
-      prob.className = 'result-prob';
-      prob.innerText = (res.confidence * 100).toFixed(2) + "%";
-      
-      item.appendChild(name);
-      item.appendChild(prob);
-      resultsContainer.appendChild(item);
-    });
-  }
-  
-  if (isAnalyzing && mode === 'video') {
-    classifyVideo();
   }
 }

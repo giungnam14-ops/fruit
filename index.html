@@ -15,6 +15,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -86,14 +87,20 @@
 
         main {
             width: 100%;
-            max-width: 1000px;
+            max-width: 1200px;
             display: grid;
             grid-template-columns: 1fr;
-            gap: 30px;
+            gap: 25px;
             padding: 20px;
         }
-        @media (min-width: 900px) {
-            main { grid-template-columns: 1.5fr 1fr; }
+        @media (min-width: 1024px) {
+            main { grid-template-columns: 1.2fr 0.8fr; }
+        }
+
+        .left-column, .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
         }
 
         .prediction-section {
@@ -129,6 +136,19 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .chart-section {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            margin-top: 10px;
+        }
+        .chart-container {
+            height: 250px;
+            width: 100%;
         }
 
         .recipe-section {
@@ -265,42 +285,53 @@
     </header>
 
     <main>
-        <section class="prediction-section">
-            <div id="canvas-container">
-                <div id="loader"></div>
-            </div>
-            <div class="controls">
-                <button id="start-btn" onclick="startAnalysis()" disabled>
-                    <span>📷</span> 실시간 분석 시작
-                </button>
-                <label for="image-input" class="file-label btn-secondary">
-                    <span>📁</span> 사진 올리기
-                </label>
-                <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
-                <button onclick="resetAll()" class="btn-danger">
-                    <span>🔄</span> 초기화
-                </button>
-            </div>
-            <div class="status-box" id="label-text">모델을 불러오는 중...</div>
-            <div id="results-container"></div>
-        </section>
+        <div class="left-column">
+            <section class="prediction-section">
+                <div id="canvas-container">
+                    <div id="loader"></div>
+                </div>
+                <div class="controls">
+                    <button id="start-btn" onclick="startAnalysis()" disabled>
+                        <span>📷</span> 분석 시작
+                    </button>
+                    <label for="image-input" class="file-label btn-secondary">
+                        <span>📁</span> 사진 올리기
+                    </label>
+                    <input type="file" id="image-input" accept="image/*" onchange="handleImageUpload(event)">
+                    <button onclick="resetAll()" class="btn-danger">
+                        <span>🔄</span> 초기화
+                    </button>
+                </div>
+                <div class="status-box" id="label-text">데이터 대기 중...</div>
+                <div id="results-container"></div>
+            </section>
 
-        <aside class="recipe-section" id="recipe-container">
-            <div class="recipe-title">
-                <span>🍎</span> 스마트 레시피 추천
-            </div>
-            <p id="recipe-intro">사과를 분석하면 품질에 맞는 최적의 활용법을 추천해 드립니다.</p>
-            
-            <!-- Default placeholder content -->
-            <div id="recipe-content-area">
-                <div class="recipe-card" style="display: block; opacity: 0.5;">
-                    <span class="recipe-tag">분석 준비</span>
-                    <div class="recipe-content">
-                        카메라를 켜거나 사진을 업로드하여 분석을 시작해 주세요.
+            <section class="chart-section" id="price-section">
+                <div class="recipe-title">
+                    <span>📊</span> 주간 가격 동향 (단위: 원)
+                </div>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <div class="right-column">
+            <aside class="recipe-section" id="recipe-container">
+                <div class="recipe-title">
+                    <span>🍳</span> 스마트 레시피 추천
+                </div>
+                <!-- ... existing header ... -->
+                <div id="recipe-content-area">
+                    <div class="recipe-card" style="display: block; opacity: 0.5;">
+                        <span class="recipe-tag">분석 대기</span>
+                        <div class="recipe-content">
+                            과일을 인식하면 최적의 레시피를 추천해 드립니다.
+                        </div>
                     </div>
                 </div>
-            </div>
-        </aside>
+            </aside>
+        </div>
     </main>
 
     <script>
